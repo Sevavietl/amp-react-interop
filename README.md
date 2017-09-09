@@ -1,12 +1,3 @@
-# Empower
+# amp-react-interop
 
-# Currently under development. Do not use.
-
-**Required PHP Version**
-
-- PHP 7.0+
-
-**TODO**
-
-1. fix README
-4. tests
+`amp-react-interop` Interoperability tools for [Amp](https://github.com/amphp/amp) <-> [ReactPHP](https://github.com/reactphp/react).

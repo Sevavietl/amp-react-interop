@@ -1,104 +1,44 @@
 <?php
 namespace Interop\Test;
 
-use Amp\Delayed;
 use Amp\Failure;
 use Amp\Loop;
-use Amp\Promise;
 use Amp\Success;
-
-class PromiseMock {
-    /** @var \Amp\Promise */
-    private $promise;
-
-    public function __construct(Promise $promise) {
-        $this->promise = $promise;
-    }
-
-    public function then(callable $onFulfilled = null, callable $onRejected = null) {
-        $this->promise->onResolve(function ($exception, $value) use ($onFulfilled, $onRejected) {
-            if ($exception) {
-                if ($onRejected) {
-                    $onRejected($exception);
-                }
-                return;
-            }
-
-            if ($onFulfilled) {
-                $onFulfilled($value);
-            }
-        });
-    }
-}
+use React\Promise\FulfilledPromise;
+use React\Promise\RejectedPromise;
 
 class AdaptTest extends \PHPUnit\Framework\TestCase {
-    public function testThenCalled() {
-        $mock = $this->getMockBuilder(PromiseMock::class)
-            ->disableOriginalConstructor()
-            ->getMock();
 
-        $mock->expects($this->once())
-            ->method("then")
-            ->with(
-                $this->callback(function ($resolve) {
-                    return is_callable($resolve);
-                }),
-                $this->callback(function ($reject) {
-                    return is_callable($reject);
-                })
-            );
-
-        $promise = Promise\adapt($mock);
-
-        $this->assertInstanceOf(Promise::class, $promise);
-    }
-
-    /**
-     * @depends testThenCalled
-     */
-    public function testPromiseFulfilled() {
+    public function testAmpFulfilled() {
         $value = 1;
 
-        $promise = new PromiseMock(new Success($value));
+        Loop::run(function () use (&$result, $value) {
+            $react = new FulfilledPromise($value);
 
-        $promise = Promise\adapt($promise);
+            $promise = \Interop\Amp\Promise\adapt($react);
 
-        $promise->onResolve(function ($exception, $value) use (&$result) {
-            $result = $value;
+            $promise->onResolve(function ($error = null, $inValue = null) use (&$result) {
+                $result = $inValue;
+            });
         });
 
         $this->assertSame($value, $result);
     }
 
-    /**
-     * @depends testThenCalled
-     */
-    public function testPromiseRejected() {
-        $exception = new \Exception;
+    public function testAmpRejected() {
+        $value = new \Exception("test");
 
-        $promise = new PromiseMock(new Failure($exception));
+        Loop::run(function () use (&$result, $value) {
+            $react = new RejectedPromise($value);
 
-        $promise = Promise\adapt($promise);
+            $promise = \Interop\Amp\Promise\adapt($react);
 
-        $promise->onResolve(function ($exception, $value) use (&$reason) {
-            $reason = $exception;
+            $promise->onResolve(function ($error = null, $inValue = null) use (&$result) {
+                $result = $error;
+            });
         });
 
-        $this->assertSame($exception, $reason);
-    }
-
-    /**
-     * @expectedException \Error
-     */
-    public function testScalarValue() {
-        Promise\adapt(1);
-    }
-
-    /**
-     * @expectedException \Error
-     */
-    public function testNonThenableObject() {
-        Promise\adapt(new \stdClass);
+        $this->assertSame($value, $result);
     }
 
     public function testReactFulfilled() {
@@ -107,7 +47,7 @@ class AdaptTest extends \PHPUnit\Framework\TestCase {
         Loop::run(function () use (&$result, $value) {
             $amp = new Success($value);
 
-            $promise = \React\Promise\adapt($amp);
+            $promise = \Interop\React\Promise\adapt($amp);
 
             $promise->then(function ($inValue) use (&$result) {
                 $result = $inValue;
@@ -123,7 +63,7 @@ class AdaptTest extends \PHPUnit\Framework\TestCase {
         Loop::run(function () use (&$result, $exception) {
             $amp = new Failure($exception);
 
-            $promise = \React\Promise\adapt($amp);
+            $promise = \Interop\React\Promise\adapt($amp);
 
             $promise->then(function ($inValue) {
                 //do nothing

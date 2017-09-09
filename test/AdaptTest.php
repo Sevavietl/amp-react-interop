@@ -1,7 +1,9 @@
 <?php
 namespace Interop\Test;
 
+use Amp\Delayed;
 use Amp\Failure;
+use Amp\Loop;
 use Amp\Promise;
 use Amp\Success;
 
@@ -97,5 +99,39 @@ class AdaptTest extends \PHPUnit\Framework\TestCase {
      */
     public function testNonThenableObject() {
         Promise\adapt(new \stdClass);
+    }
+
+    public function testReactFulfilled() {
+        $value = 1;
+
+        Loop::run(function () use (&$result, $value) {
+            $amp = new Success($value);
+
+            $promise = \React\Promise\adapt($amp);
+
+            $promise->then(function ($inValue) use (&$result) {
+                $result = $inValue;
+            });
+        });
+
+        $this->assertSame($value, $result);
+    }
+
+    public function testReactRejected() {
+        $exception = new \Exception;
+
+        Loop::run(function () use (&$result, $exception) {
+            $amp = new Failure($exception);
+
+            $promise = \React\Promise\adapt($amp);
+
+            $promise->then(function ($inValue) {
+                //do nothing
+            }, function ($inValue) use (&$result) {
+                $result = $inValue;
+            });
+        });
+
+        $this->assertSame($exception, $result);
     }
 }

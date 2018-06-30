@@ -1,5 +1,6 @@
 {
   "name": "umbri/amp-react-interop",
+  "license": "MIT",
   "autoload": {
     "files": [
       "lib/functions.php"
